@@ -1,0 +1,13 @@
+{
+  "base_id": 1,
+  "events": [
+    ["B", 1, [1, 0], {"row_number": 2, "column": "mileage", "value": "0.140", "unit": "km", "source": "B/first"}],
+    ["A", 1, [1, 0], {"row_number": 2, "column": "mileage", "value": null, "source": "A/missing"}],
+    ["B", 2, [1, 1], {"row_number": 2, "column": "mileage", "value": 135, "source": "B/confirm"}],
+    ["A", 2, [1, 1], {"row_number": 1, "column": "grade", "value": 9, "source": "A/early-grade"}],
+    ["B", 3, [1, 2], {"row_number": 1, "column": "grade", "value": 2, "source": "B/grade"}],
+    ["A", 3, [1, 2], {"row_number": 1, "column": "grade", "value": 2, "source": "A/grade"}],
+    ["B", 4, [1, 3], {"row_number": 2, "column": "grade", "value": 0, "source": "B/zero"}]
+  ],
+  "decisions": [[2, "mileage", "B", "lead/round-01"]]
+}

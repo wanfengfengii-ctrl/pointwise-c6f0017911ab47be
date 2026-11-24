@@ -1,0 +1,4 @@
+[
+  {"room": "甲", "mileage_rows": 2, "grade_rows": 2, "reverse_grade_codes": false},
+  {"room": "乙", "mileage_rows": 1, "grade_rows": 1, "reverse_grade_codes": true}
+]

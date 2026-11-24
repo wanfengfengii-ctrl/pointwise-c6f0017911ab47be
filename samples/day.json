@@ -1,0 +1,10 @@
+{
+  "batch_id": "north-day-01",
+  "observations": [
+    {"mileage": "0.120", "unit": "km", "grade": 2, "source": "car-7/log-1"},
+    {"mileage": 135, "unit": "m", "grade": 1, "source": "car-7/log-2"}
+  ],
+  "edits": [
+    {"row_number": 2, "column": "mileage", "value": null, "source": "survey/day-01/row-2"}
+  ]
+}
