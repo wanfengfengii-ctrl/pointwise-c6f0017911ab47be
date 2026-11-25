@@ -32,7 +32,9 @@ def _read_snapshot(payload: str) -> ReportSnapshot:
         for cell in row:
             fields = cell['provenance']
             fields['origin'] = CellOrigin(**fields['origin'])
-            cells.append(ProjectedCell(cell['value'], CellProvenance(**fields)))
+            cells.append(ProjectedCell(
+                cell['value'], CellProvenance(**fields), cell.get('review')
+            ))
         rows.append(tuple(cells))
     document['rows'] = tuple(rows)
     document['columns'] = tuple(document['columns'])

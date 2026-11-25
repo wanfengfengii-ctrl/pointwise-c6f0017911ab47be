@@ -7,6 +7,7 @@ from lake.packing.fragments import EncodedFragment, verify_fragment
 from lake.packing.layout import FragmentSpan, RoomLayout, plan_spans
 from lake.revision.columns import ColumnSpec, frozen_columns
 from lake.revision.membership import CellOrigin, FrozenRow
+from lake.revision.review import verify_review_evidence
 from lake.revision.store import FrozenRevision
 
 
@@ -26,6 +27,7 @@ class LoadManifest:
     dictionary: GradeDictionary
     origins: tuple[tuple[CellOrigin, ...], ...]
     load_digest: str
+    review: dict | None = None
 
     @property
     def spans(self) -> tuple[FragmentSpan, ...]:
@@ -37,12 +39,18 @@ def _json_bytes(data: object) -> bytes:
 
 
 def _revision_digest(revision: FrozenRevision) -> str:
-    return hashlib.sha256(_json_bytes(asdict(revision))).hexdigest()
+    document = asdict(revision)
+    # Ordinary revisions written before joint review support had no review key.
+    if document.get('review') is None:
+        document.pop('review', None)
+    return hashlib.sha256(_json_bytes(document)).hexdigest()
 
 
 def _load_digest(manifest: LoadManifest, fragments: tuple[EncodedFragment, ...]) -> str:
     header = asdict(manifest)
     del header['load_digest']
+    if header.get('review') is None:
+        header.pop('review', None)
     digest = hashlib.sha256(_json_bytes(header))
     for fragment in fragments:
         payload = fragment.payload
@@ -81,7 +89,7 @@ def build_manifest(revision: FrozenRevision, layout: RoomLayout, dictionary: Gra
     draft = LoadManifest(
         revision.revision_id, revision.batch_id, revision.parent_id, len(revision.rows),
         revision.columns, _revision_digest(revision), layout, dictionary,
-        tuple(row.origins for row in revision.rows), '',
+        tuple(row.origins for row in revision.rows), '', revision.review,
     )
     return replace(draft, load_digest=_load_digest(draft, fragments))
 
@@ -109,7 +117,14 @@ def verify_manifest(manifest: LoadManifest,
         FrozenRow(number, tuple(values), manifest.origins[number - 1])
         for number, values in enumerate(ordered_values, 1)
     )
-    revision = FrozenRevision(manifest.revision_id, manifest.batch_id, manifest.parent_id, manifest.columns, rows)
+    try:
+        verify_review_evidence(manifest, rows)
+    except ValueError as error:
+        raise ManifestError(f'invalid joint review evidence: {error}') from error
+    revision = FrozenRevision(
+        manifest.revision_id, manifest.batch_id, manifest.parent_id,
+        manifest.columns, rows, manifest.review,
+    )
     if _revision_digest(revision) != manifest.revision_digest:
         raise ManifestError('decoded load does not match the frozen revision')
     return decoded

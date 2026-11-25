@@ -4,6 +4,7 @@ from lake.intake.receipts import BatchLedger
 from lake.revision.columns import frozen_columns
 from lake.revision.edits import InvalidEdit, RowEdit, validate_edits
 from lake.revision.membership import derive_rows, rows_from_batch
+from lake.revision.review import build_reviewed_rows, parse_decisions, parse_events
 from lake.revision.store import FrozenRevision, RevisionStore
 
 
@@ -36,3 +37,23 @@ def freeze(store: RevisionStore, batches: BatchLedger, *, batch_id: str | None =
     changes = validate_edits(edits, (row.number for row in parent.rows), parent.columns)
     rows = derive_rows(parent.batch_id, parent.rows, changes)
     return store.insert_frozen(parent.batch_id, parent.revision_id, parent.columns, rows)
+
+
+class InvalidRevisionReference(UnknownRevision, InvalidEdit):
+    """A revision reference that is both unknown and not a valid integer ID."""
+
+
+def merge_reviews(store: RevisionStore, base_id: int, events: Iterable,
+                  decisions: Iterable = ()) -> FrozenRevision:
+    if type(base_id) is not int or base_id < 1:
+        raise InvalidRevisionReference(base_id)
+    base = store.get_frozen(base_id)
+    if base is None:
+        raise UnknownRevision(base_id)
+
+    parsed_events = parse_events(base, events)
+    parsed_decisions = parse_decisions(decisions, base)
+    rows, review = build_reviewed_rows(base, parsed_events, parsed_decisions)
+    return store.insert_frozen(
+        base.batch_id, base.revision_id, base.columns, rows, review=review
+    )

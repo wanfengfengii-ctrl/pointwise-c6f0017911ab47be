@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from lake.packing.layout import locate_cell
 from lake.reading.coverage import ProjectionRequest, VerifiedLoad
 from lake.revision.membership import CellOrigin
+from lake.revision.review import review_map
 
 
 @dataclass(frozen=True)
@@ -22,12 +23,14 @@ class CellProvenance:
 class ProjectedCell:
     value: int | None
     provenance: CellProvenance
+    review: dict | None = None
 
 
 def decode_projection(load: VerifiedLoad, request: ProjectionRequest) -> tuple[tuple[ProjectedCell, ...], ...]:
     manifest = load.manifest
     column_indexes = {column.key: index for index, column in enumerate(manifest.columns)}
     grade_dictionary_id = manifest.dictionary.dictionary_id
+    reviews = None if manifest.review is None else review_map(manifest.review)
     rows = []
     for number in range(request.first_row, request.last_row + 1):
         cells = []
@@ -38,6 +41,7 @@ def decode_projection(load: VerifiedLoad, request: ProjectionRequest) -> tuple[t
                 offset, grade_dictionary_id if column == 'grade' else None,
                 manifest.origins[number - 1][column_indexes[column]],
             )
-            cells.append(ProjectedCell(load.values[span.index][offset], provenance))
+            review = None if reviews is None else reviews[(number, column)]
+            cells.append(ProjectedCell(load.values[span.index][offset], provenance, review))
         rows.append(tuple(cells))
     return tuple(rows)
